@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ויזואליזציה אינטראקטיבית של קיפול חלבונים</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .canvas-container {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .controls {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            overflow-y: auto;
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-group h3 {
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .control-item {
+            margin-bottom: 15px;
+        }
+
+        .control-item label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .value-display {
+            display: inline-block;
+            margin-left: 10px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .info-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .info-box h4 {
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .controls {
+                width: 100%;
+                max-height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 ויזואליזציה אינטראקטיבית של קיפול חלבונים</h1>
+            <p>גרור כדי לסובב • גלגל עכבר כדי להתקרב/להתרחק • לחץ על כפתורים כדי לשלוט באנימציה</p>
+        </div>
+        <div class="main-content">
+            <div class="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+            <div class="controls">
+                <div class="control-group">
+                    <h3>🎮 בקרות אנימציה</h3>
+                    <button id="playPauseBtn">▶ התחל אנימציה</button>
+                    <button id="resetBtn">🔄 איפוס</button>
+                    <button id="randomBtn">🎲 חלבון אקראי</button>
+                </div>
+
+                <div class="control-group">
+                    <h3>⚙️ הגדרות</h3>
+                    <div class="control-item">
+                        <label>מהירות קיפול: <span class="value-display" id="speedValue">1.0</span></label>
+                        <input type="range" id="speedSlider" class="slider" min="0.1" max="3" step="0.1" value="1">
+                    </div>
+                    <div class="control-item">
+                        <label>גודל חלקיקים: <span class="value-display" id="sizeValue">1.0</span></label>
+                        <input type="range" id="sizeSlider" class="slider" min="0.5" max="3" step="0.1" value="1">
+                    </div>
+                    <div class="control-item">
+                        <label>עובי קשרים: <span class="value-display" id="bondValue">1.0</span></label>
+                        <input type="range" id="bondSlider" class="slider" min="0.1" max="3" step="0.1" value="1">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>🎨 תצוגה</h3>
+                    <div class="control-item">
+                        <label>שקיפות: <span class="value-display" id="opacityValue">1.0</span></label>
+                        <input type="range" id="opacitySlider" class="slider" min="0.1" max="1" step="0.1" value="1">
+                    </div>
+                    <button id="toggleBondsBtn">🔗 הצג/הסתר קשרים</button>
+                    <button id="toggleLabelsBtn">🏷️ הצג/הסתר תוויות</button>
+                </div>
+
+                <div class="info-box">
+                    <h4>ℹ️ מידע</h4>
+                    <p><strong>מצב:</strong> <span id="status">מוכן</span></p>
+                    <p><strong>שלב קיפול:</strong> <span id="foldingStage">0%</span></p>
+                    <p><strong>מספר אטומים:</strong> <span id="atomCount">0</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 50);
+        
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
+        renderer.setSize(document.querySelector('.canvas-container').clientWidth, document.querySelector('.canvas-container').clientHeight);
+        renderer.shadowMap.enabled = true;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(50, 50, 50);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+        
+        const pointLight = new THREE.PointLight(0x00ffff, 0.5);
+        pointLight.position.set(-50, -50, 50);
+        scene.add(pointLight);
+
+        // State
+        let isPlaying = false;
+        let animationProgress = 0;
+        let atoms = [];
+        let bonds = [];
+        let unfoldedPositions = [];
+        let foldedPositions = [];
+        let showBonds = true;
+        let showLabels = false;
+        let currentProtein = null;
+
+        // Controls
+        const controls = {
+            speed: 1.0,
+            size: 1.0,
+            bondWidth: 1.0,
+            opacity: 1.0
+        };
+
+        // Mouse controls
+        let mouseDown = false;
+        let mouseX = 0;
+        let mouseY = 0;
+        let rotationX = 0;
+        let rotationY = 0;
+
+        const canvas = document.getElementById('canvas');
+        
+        canvas.addEventListener('mousedown', (e) => {
+            mouseDown = true;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (mouseDown) {
+                const deltaX = e.clientX - mouseX;
+                const deltaY = e.clientY - mouseY;
+                rotationY += deltaX * 0.01;
+                rotationX += deltaY * 0.01;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            mouseDown = false;
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            camera.position.z += e.deltaY * 0.1;
+            camera.position.z = Math.max(10, Math.min(200, camera.position.z));
+        });
+
+        // Generate protein structure
+        function generateProtein(type = 'random') {
+            // Clear existing
+            atoms.forEach(atom => scene.remove(atom));
+            bonds.forEach(bond => scene.remove(bond));
+            atoms = [];
+            bonds = [];
+            
+            const numAtoms = type === 'random' ? Math.floor(Math.random() * 30) + 15 : 25;
+            unfoldedPositions = [];
+            foldedPositions = [];
+            
+            // Generate unfolded positions (linear chain)
+            for (let i = 0; i < numAtoms; i++) {
+                unfoldedPositions.push(new THREE.Vector3(
+                    (i - numAtoms / 2) * 2,
+                    0,
+                    0
+                ));
+            }
+            
+            // Generate folded positions (helix-like structure)
+            const radius = 8;
+            const turns = 2;
+            for (let i = 0; i < numAtoms; i++) {
+                const t = (i / numAtoms) * turns * Math.PI * 2;
+                const y = (i / numAtoms - 0.5) * 15;
+                foldedPositions.push(new THREE.Vector3(
+                    Math.cos(t) * radius,
+                    y,
+                    Math.sin(t) * radius
+                ));
+            }
+            
+            // Create atoms
+            const geometry = new THREE.SphereGeometry(controls.size, 16, 16);
+            const colors = [0xff6b6b, 0x4ecdc4, 0x45b7d1, 0xffa07a, 0x98d8c8];
+            
+            for (let i = 0; i < numAtoms; i++) {
+                const material = new THREE.MeshPhongMaterial({
+                    color: colors[i % colors.length],
+                    transparent: true,
+                    opacity: controls.opacity,
+                    emissive: colors[i % colors.length],
+                    emissiveIntensity: 0.2
+                });
+                
+                const atom = new THREE.Mesh(geometry.clone(), material);
+                atom.position.copy(unfoldedPositions[i]);
+                atom.userData.index = i;
+                scene.add(atom);
+                atoms.push(atom);
+            }
+            
+            // Create bonds
+            updateBonds();
+            
+            document.getElementById('atomCount').textContent = numAtoms;
+            currentProtein = type;
+        }
+
+        function updateBonds() {
+            bonds.forEach(bond => scene.remove(bond));
+            bonds = [];
+            
+            if (!showBonds) return;
+            
+            const bondGeometry = new THREE.CylinderGeometry(0.1 * controls.bondWidth, 0.1 * controls.bondWidth, 1, 8);
+            const bondMaterial = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: controls.opacity * 0.6
+            });
+            
+            for (let i = 0; i < atoms.length - 1; i++) {
+                const bond = new THREE.Mesh(bondGeometry.clone(), bondMaterial.clone());
+                
+                const pos1 = atoms[i].position;
+                const pos2 = atoms[i + 1].position;
+                
+                bond.position.copy(pos1.clone().add(pos2).multiplyScalar(0.5));
+                bond.lookAt(pos2);
+                bond.rotateX(Math.PI / 2);
+                bond.scale.y = pos1.distanceTo(pos2);
+                
+                scene.add(bond);
+                bonds.push(bond);
+            }
+        }
+
+        // Animation
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Rotate scene
+            scene.rotation.y = rotationY;
+            scene.rotation.x = rotationX;
+            
+            if (isPlaying && atoms.length > 0) {
+                animationProgress += 0.01 * controls.speed;
+                if (animationProgress > 1) {
+                    animationProgress = 1;
+                    isPlaying = false;
+                    document.getElementById('playPauseBtn').textContent = '▶ התחל אנימציה';
+                    document.getElementById('status').textContent = 'הושלם';
+                }
+                
+                // Interpolate positions
+                atoms.forEach((atom, i) => {
+                    if (unfoldedPositions[i] && foldedPositions[i]) {
+                        atom.position.lerpVectors(
+                            unfoldedPositions[i],
+                            foldedPositions[i],
+                            animationProgress
+                        );
+                    }
+                });
+                
+                updateBonds();
+                document.getElementById('foldingStage').textContent = Math.round(animationProgress * 100) + '%';
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // Control handlers
+        document.getElementById('playPauseBtn').addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            document.getElementById('playPauseBtn').textContent = isPlaying ? '⏸ עצור' : '▶ התחל אנימציה';
+            document.getElementById('status').textContent = isPlaying ? 'מתקפל...' : 'מוכן';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            animationProgress = 0;
+            isPlaying = false;
+            atoms.forEach((atom, i) => {
+                if (unfoldedPositions[i]) {
+                    atom.position.copy(unfoldedPositions[i]);
+                }
+            });
+            updateBonds();
+            document.getElementById('playPauseBtn').textContent = '▶ התחל אנימציה';
+            document.getElementById('status').textContent = 'מוכן';
+            document.getElementById('foldingStage').textContent = '0%';
+        });
+
+        document.getElementById('randomBtn').addEventListener('click', () => {
+            generateProtein('random');
+            animationProgress = 0;
+            isPlaying = false;
+            document.getElementById('playPauseBtn').textContent = '▶ התחל אנימציה';
+            document.getElementById('status').textContent = 'מוכן';
+            document.getElementById('foldingStage').textContent = '0%';
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            controls.speed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = controls.speed.toFixed(1);
+        });
+
+        document.getElementById('sizeSlider').addEventListener('input', (e) => {
+            controls.size = parseFloat(e.target.value);
+            document.getElementById('sizeValue').textContent = controls.size.toFixed(1);
+            atoms.forEach(atom => {
+                atom.scale.set(controls.size, controls.size, controls.size);
+            });
+        });
+
+        document.getElementById('bondSlider').addEventListener('input', (e) => {
+            controls.bondWidth = parseFloat(e.target.value);
+            document.getElementById('bondValue').textContent = controls.bondWidth.toFixed(1);
+            updateBonds();
+        });
+
+        document.getElementById('opacitySlider').addEventListener('input', (e) => {
+            controls.opacity = parseFloat(e.target.value);
+            document.getElementById('opacityValue').textContent = controls.opacity.toFixed(1);
+            atoms.forEach(atom => {
+                atom.material.opacity = controls.opacity;
+            });
+            bonds.forEach(bond => {
+                bond.material.opacity = controls.opacity * 0.6;
+            });
+        });
+
+        document.getElementById('toggleBondsBtn').addEventListener('click', () => {
+            showBonds = !showBonds;
+            document.getElementById('toggleBondsBtn').textContent = showBonds ? '🔗 הצג/הסתר קשרים' : '🔗 הצג/הסתר קשרים';
+            updateBonds();
+        });
+
+        document.getElementById('toggleLabelsBtn').addEventListener('click', () => {
+            showLabels = !showLabels;
+            document.getElementById('toggleLabelsBtn').textContent = showLabels ? '🏷️ הצג/הסתר תוויות' : '🏷️ הצג/הסתר תוויות';
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const container = document.querySelector('.canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // Initialize
+        generateProtein();
+        animate();
+    </script>
+</body>
+</html>
